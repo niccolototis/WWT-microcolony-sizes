@@ -1,0 +1,101 @@
+function [] = plotPBE3D_1D_time(aSt,aSpPBE) 
+% Run this script to generate data from
+% i) the ngp with implicit Euler (ie)
+% ii) ngp with Gauss-Legendre (gl)
+% iii) cell average technique (cat)
+% for a one-dimensional pbe undergoing linear growth.
+%
+% Armin Kueper
+% created: 09 April 2019
+global folderPlots spNames 
+sp = char(spNames{aSpPBE}); 
+
+%% Plotting Niccolo
+
+
+alpha = 0.15;
+
+n_plots    = 4; % number of snapshots
+
+time = aSt.(sp).t_all_PBE; %0:t_step:Tsim; % real time
+dataPoints    = length(time);
+indexSlice = round(dataPoints*[0,1/10,1/2,1]);
+plot_ticks = [1 3 8 18]; % in this way I define approximate proportions of the distances of the slices on the time axis
+indexSlice(1) = 1;
+indexSlice(end) = dataPoints;
+for kl = 2:length(indexSlice)
+ if indexSlice(kl)<= indexSlice(kl-1)
+   indexSlice(kl) = indexSlice(kl-1)+1;
+ end
+end
+
+
+plot_indices = indexSlice;
+timePointsPlotted = aSt.(sp).t_all_PBE(plot_indices);
+n_plots = length(plot_indices); % sometimes they differ
+
+N_star = size(aSt.(sp).x2_all_res,2);
+% x_star_plot = zeros(N_star, n_plots);
+time_plot = zeros(N_star, n_plots);
+
+for k = 1:n_plots
+% x_star_plot(:,k) = aSt.(sp).x2_all_res; %x_star_ie(:);
+%         time_plot(:,k)   = time(plot_indices(k));
+ time_plot(:,k) = plot_ticks(k);
+end
+aSt.(sp).x2_all_res = aSt.(sp).x2_all_res';
+x_star_plot = aSt.(sp).x2_all_res(:,plot_indices);
+x_star_plot_ie_gl  = x_star_plot;
+
+MEAN_ie_norm = aSt.(sp).Marg_x2_RESC0to1';
+MEAN_ie_plot = MEAN_ie_norm(:,plot_indices);
+
+
+%% Temporal Plot for implicit Euler
+
+figure
+x_paper = 20; % [cm]
+y_paper = 16; % [cm]
+
+set(gcf,'Color',[1 1 1])
+set(gcf,'Renderer','painters')
+set(gcf,'Units','centimeters');
+set(gcf,'Position',[17 5 x_paper y_paper]);
+set(gcf,'Units','normalized');
+set(gcf,'PaperType','<custom>');
+set(gcf,'PaperUnits','centimeters');
+set(gcf,'PaperSize',[x_paper y_paper]);
+set(gcf,'PaperPosition',[0 0 x_paper y_paper]);
+
+
+plot3(x_star_plot_ie_gl, time_plot, MEAN_ie_plot, 'LineWidth',2)
+
+% fill is for uncertainty
+% fill_x = [x_star_plot_ie_gl; flipud(x_star_plot_ie_gl)];
+% fill_y = [time_plot; flipud(time_plot)];
+% fill_z = [MEAN_ie_plot - SD2_ie_plot; flipud(MEAN_ie_plot + SD2_ie_plot)];
+% fill3_plot = fill3(fill_x, fill_y, fill_z, [0 0 1]);
+% set(fill3_plot, 'facealpha', alpha, 'edgealpha', alpha)
+% plot3(x_star_plot, time_plot, MEAN_cat_plot, 'r', 'LineWidth',2)
+% plot3(training_points(:,1), zeros(N_training,1), training_points(:,2)./Ncells0,... 
+% 'bo', 'MarkerSize',12) % points for the initial conditions 
+hold off
+yticks(plot_ticks)
+yticklabels(cellstr(string(timePointsPlotted)));
+
+% set(gca,'xticklabel','1.e-12')
+
+% zlim([0 0.3])
+az = 35;
+el = 22;
+view(az,el)
+xlabel('cell size')
+ylabel('time')
+zlabel('NDF')
+%legend('exact', 'NGP with IE and two-times the SD', 'NGP with GL and two-times the SD','CAT', 'Location', 'Best')
+set(gca,'Fontname','Arial')
+set(gca,'Fontsize',24)
+
+filename = 'temporal_ie_proliferation.pdf';
+print('-painters','-dpdf','-r1200',strcat([folderPlots filename])) % pdf.Datei
+end
