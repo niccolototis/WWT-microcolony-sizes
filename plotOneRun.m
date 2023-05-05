@@ -23,7 +23,7 @@ function [] = plotOneRun(P,aFig,BiomassTrajectory,nameBiom,namePlot)
         aName = strcat([nameBiom,'_BASE']);
         filename = strcat([P.folderPlots,aName,'.fig']);
     case 'chosenSetASM1seq'
-        aName = strcat([nameBiom,'_scan_',strjoin(P.parToSweep,'_')]);
+        aName = strcat([nameBiom,'_scan_',strjoin(P.pSweep.parNamesSweep,'_')]);
         filename = strcat([P.folderPlots,aName,'.fig']);
  end
  savefig(filename)

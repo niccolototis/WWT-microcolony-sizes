@@ -4,7 +4,7 @@ global gcs folderOutput T_sim cycleModStr improvStr
 P = addToRecover(P);
 P = settingsASM1seq(P); 
 
-if P.plotASM1seq && ~P.plotPhases
+if P.plotASM1seq && ~P.plotPhases 
  figHET = figure('visible','on','Position',[892,385,560,420]);
  figHET.Name = 'figHET';
  figAUT = figure('visible','on','Position',[881,54,560,420]);

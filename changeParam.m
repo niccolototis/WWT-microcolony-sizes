@@ -7,7 +7,7 @@ function P = changeParam(P,idx,parChangingNames)
  for jj = 1:length(parChangingNames) % for each of the parameters that I change
     str = strcat(['p' num2str(jj)]);       
     P.(char(parChangingNames(jj))) = P.(str)(idx); %I assign the ii-th par value to its specific parameter name 
-%     fprintf(fileID, strcat([char(parChangingNames(jj)),' = %.3f']), P.(str)(idx));
+    % fprintf(fileID, strcat([char(parChangingNames(jj)),' = %.3f']), P.(str)(idx));
  end
 % fprintf(fileID, '\n');
 % fclose(fileID);

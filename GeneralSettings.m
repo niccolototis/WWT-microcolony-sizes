@@ -53,6 +53,7 @@ switch parSetup
     
     disp('For the Morris Method I am starting from the baseline parameter values!')
  case 'paramSweep'
+     P.numberSweepBatches_ASM1seq = ceil(P.nSweeps/P.batchSizeSweep);
     IC_at = 'data';
     % - Select one of the following options for how param combinations are
     % generated

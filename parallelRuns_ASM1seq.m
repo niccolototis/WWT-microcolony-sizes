@@ -113,7 +113,7 @@ function [P,varargout] = parallelRuns_ASM1seq(P)
             grNet_AUT_allRuns = zeros(P.nRuns,P.ntpts_ASM1seq);
             X_c_end_allRuns = zeros(P.nRuns,P.nPart);
             S_c_end_allRuns = zeros(P.nRuns,P.nSolub);
-            parfor aRun = 1:P.nRuns
+            for aRun = 1:P.nRuns
                 if P.tryCatch                    
                     try
                         [oneResult,~,S_c_tall_gc,X_c_end,S_c_end] = runASM1seqForOneParam(aRun,P);
@@ -125,7 +125,7 @@ function [P,varargout] = parallelRuns_ASM1seq(P)
                 else
                     [oneResult,~,S_c_tall_gc,X_c_end,S_c_end] = runASM1seqForOneParam(aRun,P);
                 end
-                updateASM1seqPlot([aRun,oneResult],P);
+                updateASM1seqPlot([aRun,oneResult(:)'],P);
                                             
                 results(aRun,:) = oneResult;
                 grNet_AUT_allRuns(aRun,:) = P.MuA.*(S_c_tall_gc(:,P.sNH4)./(P.KNH+S_c_tall_gc(:,P.sNH4))).*(S_c_tall_gc(:,P.sO2)./(P.KOH+S_c_tall_gc(:,P.sO2)))-P.bA;

@@ -1,4 +1,4 @@
-esfunction [] = runASM1seqparamSweep(P)
+function [] = runASM1seqparamSweep(P)
 global T_sim folderOutput 
 
  %% Load model output with baseline parameter
@@ -17,27 +17,33 @@ global T_sim folderOutput
  
  fRes = [folderOutput,'resASM1seq_',num2str(T_sim),'.mat'];
  if ~isfile(fRes)
-    P = changeParam(P,1,P.parToChange);
+    P = changeParam(P,1,P.pSweep.parNamesSweep);
     [~,X_c_res,~,~] = runASM1seqForOneParam(1,P); 
  else
     load([folderOutput,'resASM1seq_',num2str(T_sim),'.mat'],'X_c_res');
  end
  
  %% load or produce parameter sweep results
- fname1 = './outputs/tmpOutputs/runASM1seqparamSweep_tmp.mat';
- fname2 = './outputs/tmpOutputs/AllSweep_ASM1seq.mat';
+ if ~exist('./outputs/parameter_sweep_ASM1seq/tmp','dir')
+     mkdir('./outputs/parameter_sweep_ASM1seq/tmp')
+ end
+ fname1 = './outputs/parameter_sweep_ASM1seq/tmp/runASM1seqparamSweep_tmp.mat';
+ fname2 = './outputs/parameter_sweep_ASM1seq/tmp/AllSweep_ASM1seq.mat';
  if ~(exist(fname1,'file') && exist(fname2,'file')) || P.plotASM1seq
-    fname = './outputs/tmpOutputs/runASM1seqparamSweep_tmp.mat';
+    fname = './outputs/parameter_sweep_ASM1seq/tmp/runASM1seqparamSweep_tmp.mat';
     if ~exist(fname,'file') || P.runASM1seq
         if P.runASM1seq 
             ntp = P.ntpts_ASM1seq;
             if strcmp(P.plot,'both_HET_AUT')
                 ntp = 2*ntp;
             end
-            [P,results,grNet_AUT_allRuns,X_c_end_allRuns,S_c_end_allRuns] = parallelRuns_ASM1seq(P);
+            for q = 1:P.numberSweepBatches_ASM1seq
+                qStr = num2str(q);
+                [P,results,grNet_AUT_allRuns,X_c_end_allRuns,S_c_end_allRuns] = parallelRuns_ASM1seq(P);
+                AllSweep_ASM1seq.(['batch_',qStr]).results = results;
+            end
         else
             % load(P.filename_pSweepASM1seq_results_toPlot,'results','X_c_end_allRuns','S_c_end_allRuns')        
-            P.numberSweepBatches_ASM1seq = ceil(P.nSweeps/P.batchSizeSweep);
             AllSweep_ASM1seq.Runs_acceptance = []; AllSweep_ASM1seq.runIdx=[];startIdx=0;
             AllSweep_ASM1seq.X_c_end_allRuns = []; AllSweep_ASM1seq.S_c_end_allRuns=[];
             for q = 1:P.numberSweepBatches_ASM1seq
@@ -75,74 +81,78 @@ global T_sim folderOutput
         % Impo! I have to take gHET_in_total from P_lb as gAUT_in_total = 1-gHET_in_total
         X_AUT_0_ub = P.pSweep.ub_biom_conc*tB.ub('active_biom_in_gCOD')*(1-tB.lb('gHET_in_total'))*tB.ub('gCOD_in_gVSS')*tB.ub('gVSS_in_gMLSS'); %22; %Active autotrophic biomass, Xb,a
 
-        save('./outputs/tmpOutputs/runASM1seqparamSweep_tmp.mat','-v7.3')
+        save('./outputs/parameter_sweep_ASM1seq/tmp/runASM1seqparamSweep_tmp.mat','-v7.3')
     else
-        load('./outputs/tmpOutputs/runASM1seqparamSweep_tmp.mat')
+        load('./outputs/parameter_sweep_ASM1seq/tmp/runASM1seqparamSweep_tmp.mat')
     end
 
     %% Plotting sweep trajectories and computing the acceptance scores
-    for q = 1:P.numberSweepBatches_ASM1seq
-        qStr = num2str(q);
-        [P,AllSweep_ASM1seq] = plotOneBatch_pSweep_ASM1seq(P,AllSweep_ASM1seq,qStr,X_HET_0_lb,X_HET_0_ub,X_AUT_0_lb,X_AUT_0_ub,X_c_res_base,X_c_res);
-    end
-
-    % save('./outputs/tmpOutputs/AllSweep_ASM1seq.mat','AllSweep_ASM1seq','-v7.3')
+    % NB this is run only for previously saved batches of runs, here not
+    % reported
+    
+    %     for q = 1:P.numberSweepBatches_ASM1seq
+    %         qStr = num2str(q);
+    %         [P,AllSweep_ASM1seq] = plotOneBatch_pSweep_ASM1seq(P,AllSweep_ASM1seq,qStr,X_HET_0_lb,X_HET_0_ub,X_AUT_0_lb,X_AUT_0_ub,X_c_res_base,X_c_res);
+    %     end
+    %     save('./outputs/parameter_sweep_ASM1seq/tmp/AllSweep_ASM1seq.mat','AllSweep_ASM1seq','-v7.3')
  else
     load(fname1)
     load(fname2,'AllSweep_ASM1seq')
  end
  %% Create the global rankings: identifying the 20 best parameter sets
- 
- rowsToRemove = find(AllSweep_ASM1seq.Runs_acceptance.Ranking==0);
- AllSweep_ASM1seq.Runs_acceptance(rowsToRemove,:) = [];
- AllSweep_ASM1seq.runIdx(rowsToRemove,:) = [];
- AllSweep_ASM1seq.X_c_end_allRuns(rowsToRemove,:) = [];
- AllSweep_ASM1seq.S_c_end_allRuns(rowsToRemove,:) = [];
- 
- % the bounds
- [~,idx] = sort(AllSweep_ASM1seq.Runs_acceptance.distance_SS_to_IS);
- ranking = zeros(size(idx));
- ranking(idx) = (1:length(idx));
- AllSweep_ASM1seq.Runs_acceptance.Ranking = ranking;
- [~,idxSorted] = sort(AllSweep_ASM1seq.Runs_acceptance.Ranking);
- AllSweep_ASM1seq.Runs_acceptance = AllSweep_ASM1seq.Runs_acceptance(idxSorted,:);
- AllSweep_ASM1seq.runIdx = AllSweep_ASM1seq.runIdx(idxSorted,:);
- AllSweep_ASM1seq.X_c_end_allRuns = AllSweep_ASM1seq.X_c_end_allRuns(idxSorted,:);
- AllSweep_ASM1seq.S_c_end_allRuns = AllSweep_ASM1seq.S_c_end_allRuns(idxSorted,:);
-
- %idxBestKparSweeps = AllSweep_ASM1seq.Runs_acceptance.runIdx(1:P.nBestKparSweeps);
- 
- bestSweep_ASM1seq.Runs_acceptance = AllSweep_ASM1seq.Runs_acceptance;
- bestSweep_ASM1seq.results = [];bestSweep_ASM1seq.X_c_end_allRuns=[];bestSweep_ASM1seq.S_c_end_allRuns=[];bestSweep_ASM1seq.runIdx=[];bestSweep_AS1seq.parSets=[];
- for kk = 1:size(AllSweep_ASM1seq.Runs_acceptance,1)
-    aRunIdx = AllSweep_ASM1seq.runIdx(kk);
-    nBatch = floor(aRunIdx./P.batchSizeSweep);
-    nRunInThisBatch = mod(aRunIdx, P.batchSizeSweep);
+    % NB this is run only for previously saved batches of runs, here not
+    % reported
     
-    if nRunInThisBatch>0
-        nBatch = nBatch+1;
-    else
-        nRunInThisBatch = P.batchSizeSweep; % E' l'ultima run del batch
-    end
-    
-    qStr = num2str(nBatch);
-    bestSweep_ASM1seq.results = [bestSweep_ASM1seq.results;  AllSweep_ASM1seq.(['batch_',qStr]).results(nRunInThisBatch,:)];
-   
-    % Verify that X_c_end is the same
-    if ~reallyEqual(AllSweep_ASM1seq.X_c_end_allRuns(kk,:),AllSweep_ASM1seq.(['batch_',qStr]).X_c_end_allRuns(nRunInThisBatch,:))
-        error('should be the same, check')
-    end
-    if ~reallyEqual(AllSweep_ASM1seq.S_c_end_allRuns(kk,:),AllSweep_ASM1seq.(['batch_',qStr]).S_c_end_allRuns(nRunInThisBatch,:))
-        error('should be the same, check')
-    end
-    
-    bestSweep_ASM1seq.X_c_end_allRuns = [bestSweep_ASM1seq.X_c_end_allRuns;  AllSweep_ASM1seq.(['batch_',qStr]).X_c_end_allRuns(nRunInThisBatch,:)];
-    bestSweep_ASM1seq.S_c_end_allRuns = [bestSweep_ASM1seq.S_c_end_allRuns;  AllSweep_ASM1seq.(['batch_',qStr]).S_c_end_allRuns(nRunInThisBatch,:)];
-    bestSweep_ASM1seq.runIdx = [bestSweep_ASM1seq.runIdx; AllSweep_ASM1seq.(['batch_',qStr]).runIdx(nRunInThisBatch,:)];
-    bestSweep_ASM1seq.parSets = [bestSweep_ASM1seq.parSets; AllParSetsSweep_ASM1seq.(['batch_',qStr]).paramSetsUsed(nRunInThisBatch,:)];       
- end
- 
- save('./outputs/parameter_sweep_ASM1seq/bestSweep_ASM1seq.mat','bestSweep_ASM1seq','-v7.3') 
+    %  rowsToRemove = find(AllSweep_ASM1seq.Runs_acceptance.Ranking==0);
+    %  AllSweep_ASM1seq.Runs_acceptance(rowsToRemove,:) = [];
+    %  AllSweep_ASM1seq.runIdx(rowsToRemove,:) = [];
+    %  AllSweep_ASM1seq.X_c_end_allRuns(rowsToRemove,:) = [];
+    %  AllSweep_ASM1seq.S_c_end_allRuns(rowsToRemove,:) = [];
+    %  
+    %  % the bounds
+    %  [~,idx] = sort(AllSweep_ASM1seq.Runs_acceptance.distance_SS_to_IS);
+    %  ranking = zeros(size(idx));
+    %  ranking(idx) = (1:length(idx));
+    %  AllSweep_ASM1seq.Runs_acceptance.Ranking = ranking;
+    %  [~,idxSorted] = sort(AllSweep_ASM1seq.Runs_acceptance.Ranking);
+    %  AllSweep_ASM1seq.Runs_acceptance = AllSweep_ASM1seq.Runs_acceptance(idxSorted,:);
+    %  AllSweep_ASM1seq.runIdx = AllSweep_ASM1seq.runIdx(idxSorted,:);
+    %  AllSweep_ASM1seq.X_c_end_allRuns = AllSweep_ASM1seq.X_c_end_allRuns(idxSorted,:);
+    %  AllSweep_ASM1seq.S_c_end_allRuns = AllSweep_ASM1seq.S_c_end_allRuns(idxSorted,:);
+    % 
+    %  %idxBestKparSweeps = AllSweep_ASM1seq.Runs_acceptance.runIdx(1:P.nBestKparSweeps);
+    %  
+    %  bestSweep_ASM1seq.Runs_acceptance = AllSweep_ASM1seq.Runs_acceptance;
+    %  bestSweep_ASM1seq.results = [];bestSweep_ASM1seq.X_c_end_allRuns=[];bestSweep_ASM1seq.S_c_end_allRuns=[];bestSweep_ASM1seq.runIdx=[];bestSweep_AS1seq.parSets=[];
+    %  for kk = 1:size(AllSweep_ASM1seq.Runs_acceptance,1)
+    %     aRunIdx = AllSweep_ASM1seq.runIdx(kk);
+    %     nBatch = floor(aRunIdx./P.batchSizeSweep);
+    %     nRunInThisBatch = mod(aRunIdx, P.batchSizeSweep);
+    %     
+    %     if nRunInThisBatch>0
+    %         nBatch = nBatch+1;
+    %     else
+    %         nRunInThisBatch = P.batchSizeSweep; % E' l'ultima run del batch
+    %     end
+    %     
+    %     qStr = num2str(nBatch);
+    %     bestSweep_ASM1seq.results = [bestSweep_ASM1seq.results;  AllSweep_ASM1seq.(['batch_',qStr]).results(nRunInThisBatch,:)];
+    %    
+    %     % Verify that X_c_end is the same
+    %     if ~reallyEqual(AllSweep_ASM1seq.X_c_end_allRuns(kk,:),AllSweep_ASM1seq.(['batch_',qStr]).X_c_end_allRuns(nRunInThisBatch,:))
+    %         error('should be the same, check')
+    %     end
+    %     if ~reallyEqual(AllSweep_ASM1seq.S_c_end_allRuns(kk,:),AllSweep_ASM1seq.(['batch_',qStr]).S_c_end_allRuns(nRunInThisBatch,:))
+    %         error('should be the same, check')
+    %     end
+    %     
+    %     bestSweep_ASM1seq.X_c_end_allRuns = [bestSweep_ASM1seq.X_c_end_allRuns;  AllSweep_ASM1seq.(['batch_',qStr]).X_c_end_allRuns(nRunInThisBatch,:)];
+    %     bestSweep_ASM1seq.S_c_end_allRuns = [bestSweep_ASM1seq.S_c_end_allRuns;  AllSweep_ASM1seq.(['batch_',qStr]).S_c_end_allRuns(nRunInThisBatch,:)];
+    %     bestSweep_ASM1seq.runIdx = [bestSweep_ASM1seq.runIdx; AllSweep_ASM1seq.(['batch_',qStr]).runIdx(nRunInThisBatch,:)];
+    %     bestSweep_ASM1seq.parSets = [bestSweep_ASM1seq.parSets; AllParSetsSweep_ASM1seq.(['batch_',qStr]).paramSetsUsed(nRunInThisBatch,:)];       
+    %  end
+    %  
+    %  save('./outputs/parameter_sweep_ASM1seq/bestSweep_ASM1seq.mat','bestSweep_ASM1seq','-v7.3') 
 return
 
 
