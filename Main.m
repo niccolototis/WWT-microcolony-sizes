@@ -40,7 +40,7 @@ parSetup = 'chosenSetASM1seq';
 % 'chosenSetASM1seq' is the set of parameters eventually chosen
 
 % Choose option for the initial condition
-IC_at = 'SS_computed'; 
+IC_at = 'data'; 
 % 'data' is used when running the sensitivity analysis and the parameter sweep
 % 'SS_computed' initializes ASM1seq to the final state obtained after the parameter sweep
 % 'startupScenario' simulates the startup scenario

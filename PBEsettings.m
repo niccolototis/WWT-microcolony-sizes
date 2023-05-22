@@ -57,6 +57,8 @@ switch IC_at
     cutAt_x2Max = 0.05; 
  case 'startupScenario'
     cutAt_x2Max = 0.10; 
+ case 'data'
+    cutAt_x2Max = 0.10;     
 end
 excludeFirstPoint = false;
 nTrapezPerCell = 3; % Used to "integrate" ksdensity => N
